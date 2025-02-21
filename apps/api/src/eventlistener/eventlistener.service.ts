@@ -1,12 +1,13 @@
 import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
-import { ethers } from 'ethers';
+import { ethers, Transaction } from 'ethers';
 import { FUSDC_ABI__factory } from 'src/contracts';
 import { FUSDC_ABI, FUSDC_ABIInterface } from 'src/contracts/FUSDC_ABI';
 import { BlockDetails, DepositEventDetails, WithdrawEventDetails } from './eventslistener.types';
 import BigNumber from 'bignumber.js';
+import { TransactionsService } from 'src/transactions/transactions.service';
 
-const CHUNK_SIZE = 100;
-const HISTORY_BLOCKS = 3000;
+const CHUNK_SIZE = 1000;
+const HISTORY_BLOCKS = 4000;
 const PROVIDER_URL = 'https://base-mainnet.infura.io/v3';
 
 @Injectable()
@@ -18,23 +19,32 @@ export class EventListenerService implements OnModuleInit {
   private FUSDC_ADDRESS = process.env.FUSDC_ADDRESS;
   private blocksDetails: BlockDetails = {} as BlockDetails;
 
-  constructor() {
+  constructor(private transactionsService: TransactionsService) {
     this.logger.log('EventListenerService initialized');
   }
 
   async onModuleInit() {
     this.logger.log('EventListenerService is running');
+    const lastBlockInDb = await this.transactionsService.getLastBlock();
+    this.logger.log(`Last block: ${lastBlockInDb}`);
+    
     this.provider = new ethers.JsonRpcProvider(`${PROVIDER_URL}/${process.env.INFURA_API_KEY}`);
     this.provider.getNetwork().then((network) => {
       this.logger.log(`Network: ${network.name}`);
     });
     this.contract = FUSDC_ABI__factory.connect(this.FUSDC_ADDRESS, this.provider);
-    const latestBlock: ethers.BlockTag = await this.provider.getBlockNumber();
-    await this.getHistoricalLogs(latestBlock - HISTORY_BLOCKS, latestBlock);
+    const currentBlock = await this.provider.getBlockNumber();
+    const startBlock = lastBlockInDb ? BigInt(lastBlockInDb) : currentBlock - HISTORY_BLOCKS;
 
+    
     this.provider.on('block', async (blockNumber) => {
-      this.logger.log(`Block number: ${blockNumber}`);
+        this.logger.debug(`Get block information for block ${blockNumber.toString()}`);
+        const deposits = await this.getDepositEvent(BigInt(blockNumber)-BigInt(1), BigInt(blockNumber));
+        const withdraws = await this.getWithdrawEvent(BigInt(blockNumber)-BigInt(1), BigInt(blockNumber));
+        console.log('Deposits:', deposits);
+        console.log('Withdraws:', withdraws);
     });
+    await this.getHistoricalLogs(startBlock, currentBlock);
   }
 
   private async getEvent<T extends DepositEventDetails | WithdrawEventDetails>(
@@ -49,23 +59,49 @@ export class EventListenerService implements OnModuleInit {
       address: this.FUSDC_ADDRESS,
       topics,
     });
-    logs.forEach(async (log) => {
+    for (let i = 0; i < logs.length; i++) {
+      const log = logs[i];
       const logData = await this.parseLog<T>(log);
       data.push(logData);
-    });
+    }
     return data;
   }
 
   private async getDepositEvent(fromBlock: BigInt, toBlock: BigInt): Promise<DepositEventDetails[]> {
     const depositFilter = this.contract.filters.Deposit(null, null, null);
     const topics = await depositFilter.getTopicFilter();
-    return this.getEvent<DepositEventDetails>(fromBlock, toBlock, topics);
+    const events = await this.getEvent<DepositEventDetails>(fromBlock, toBlock, topics);
+
+    const dbEvents = events.map((event) => {
+      return {
+        ...event,
+        assets: event.assets.toString(),
+        shares: event.shares.toString(),
+        block: event.block.toString(),
+        timestamp: new Date(event.timestamp * 1000),
+      };
+    });
+    console.log(events);
+    console.log(dbEvents);
+    await this.transactionsService.addDeposits(dbEvents);
+    return events;
   }
 
   private async getWithdrawEvent(fromBlock: BigInt, toBlock: BigInt): Promise<WithdrawEventDetails[]> {
     const withdrawFilter = this.contract.filters.Withdraw(null, null, null);
     const topics = await withdrawFilter.getTopicFilter();
-    return this.getEvent<WithdrawEventDetails>(fromBlock, toBlock, topics);
+    const events = await this.getEvent<WithdrawEventDetails>(fromBlock, toBlock, topics);
+    const dbEvents = events.map((event) => {
+      return {
+        ...event,
+        assets: event.assets.toString(),
+        shares: event.shares.toString(),
+        block: event.block.toString(),
+        timestamp: new Date(event.timestamp * 1000),
+      };
+    });
+    const result = await this.transactionsService.addWithdrawals(dbEvents);
+    return events;
   }
 
   private async parseLog<T extends DepositEventDetails | WithdrawEventDetails>(log: ethers.Log): Promise<T> {
