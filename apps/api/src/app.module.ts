@@ -8,25 +8,26 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { DepositEvent } from './transactions/entities/depositEvent.entity';
 import { WithdrawEvent } from './transactions/entities/withdrawEvent.entity';
 import { TransactionsService } from './transactions/transactions.service';
+import { Aggregates } from './transactions/entities/aggregates.entity';
 
 @Module({
-  imports: [ConfigModule.forRoot(), 
+  imports: [
+    ConfigModule.forRoot(),
     TypeOrmModule.forRoot({
-      type: 'postgres',  
+      type: 'postgres',
       host: process.env.DB_HOST,
       port: parseInt(process.env.DB_PORT),
       username: process.env.DB_USER,
       password: process.env.DB_PASSWORD,
       database: process.env.DB_NAME,
       entities: [DepositEvent, WithdrawEvent],
-      synchronize: true,  // Set to false for production
+      synchronize: true, // Set to false for production
       autoLoadEntities: true,
     }),
-    TypeOrmModule.forFeature([DepositEvent, WithdrawEvent]), // Import the entities
-    TransactionsModule
-
+    TypeOrmModule.forFeature([DepositEvent, WithdrawEvent, Aggregates]), // Import the entities
+    TransactionsModule,
   ],
   controllers: [AppController],
-  providers: [AppService, EventListenerService,TransactionsService],
+  providers: [AppService, EventListenerService, TransactionsService],
 })
 export class AppModule {}

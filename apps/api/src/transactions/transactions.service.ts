@@ -4,6 +4,7 @@ import { DataSource, Repository } from 'typeorm';
 import { DepositEvent } from './entities/depositEvent.entity';
 import { WithdrawEvent } from './entities/withdrawEvent.entity';
 import BigNumber from 'bignumber.js';
+import { Aggregates } from './entities/aggregates.entity';
 
 @Injectable()
 export class TransactionsService {
@@ -11,6 +12,7 @@ export class TransactionsService {
   constructor(
     @InjectRepository(DepositEvent) private depositRepository: Repository<DepositEvent>,
     @InjectRepository(WithdrawEvent) private withdrawalRepository: Repository<WithdrawEvent>,
+    @InjectRepository(Aggregates) private aggregateRepository: Repository<Aggregates>,
     private dataSource: DataSource,
   ) {}
 
