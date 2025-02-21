@@ -2,7 +2,7 @@ import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { ethers } from 'ethers';
 import { FUSDC_ABI__factory } from 'src/contracts';
 import { FUSDC_ABI, FUSDC_ABIInterface } from 'src/contracts/FUSDC_ABI';
-import { DepositEventDetails, WithdrawEventDetails } from './eventslistener.types';
+import { BlockDetails, DepositEventDetails, WithdrawEventDetails } from './eventslistener.types';
 import BigNumber from 'bignumber.js';
 
 const CHUNK_SIZE = 100;
@@ -16,6 +16,8 @@ export class EventListenerService implements OnModuleInit {
   private contract: FUSDC_ABI;
   private interface = new ethers.Interface(FUSDC_ABI__factory.abi) as FUSDC_ABIInterface;
   private FUSDC_ADDRESS = process.env.FUSDC_ADDRESS;
+  private blocksDetails: BlockDetails = {} as BlockDetails;
+
   constructor() {
     this.logger.log('EventListenerService initialized');
   }
@@ -47,8 +49,8 @@ export class EventListenerService implements OnModuleInit {
       address: this.FUSDC_ADDRESS,
       topics,
     });
-    logs.forEach((log) => {
-      const logData = this.parseLog<T>(log);
+    logs.forEach(async (log) => {
+      const logData = await this.parseLog<T>(log);
       data.push(logData);
     });
     return data;
@@ -66,7 +68,7 @@ export class EventListenerService implements OnModuleInit {
     return this.getEvent<WithdrawEventDetails>(fromBlock, toBlock, topics);
   }
 
-  private parseLog<T extends DepositEventDetails | WithdrawEventDetails>(log: ethers.Log): T {
+  private async parseLog<T extends DepositEventDetails | WithdrawEventDetails>(log: ethers.Log): Promise<T> {
     const parsedLog = this.interface.parseLog(log);
     const logData: T = {} as T;
     parsedLog.fragment.inputs.forEach((input, index) => {
@@ -75,7 +77,17 @@ export class EventListenerService implements OnModuleInit {
     logData.name = parsedLog.name;
     logData.block = log.blockNumber;
     logData.index = log.index;
+    logData.timestamp = await this.getBlockTimestamp(log.blockNumber.toString());
     return logData;
+  }
+
+  private async getBlockTimestamp(blockNumber: string): Promise<number> {
+    if (this.blocksDetails[blockNumber]) {
+      return this.blocksDetails[blockNumber];
+    }
+    const block = await this.provider.getBlock(BigInt(blockNumber));
+    this.blocksDetails[blockNumber] = block.timestamp;
+    return block.timestamp;
   }
 
   private async getHistoricalLogs(startBlock: ethers.BlockTag, endBlock: ethers.BlockTag): Promise<void> {
@@ -93,7 +105,7 @@ export class EventListenerService implements OnModuleInit {
 
       const deposits = await this.getDepositEvent(BigInt(start.toString()), BigInt(end.toString()));
       const withdraws = await this.getWithdrawEvent(BigInt(start.toString()), BigInt(end.toString()));
-      
+
       console.log(deposits);
       console.log(withdraws);
 
