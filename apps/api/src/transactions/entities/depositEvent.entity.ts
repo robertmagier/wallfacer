@@ -1,4 +1,4 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, Unique } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, Unique, Index } from 'typeorm';
 
 @Entity('deposits')
 @Unique(['block', 'index'])
@@ -10,6 +10,7 @@ export class DepositEvent {
   sender: string;
 
   @Column({ type: 'varchar', length: 42 })
+  @Index()
   owner: string;
 
   @Column({ type: 'numeric', precision: 78, scale: 0 })

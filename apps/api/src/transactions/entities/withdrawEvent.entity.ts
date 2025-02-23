@@ -1,4 +1,4 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, Unique } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, Unique, Index } from 'typeorm';
 
 @Entity('withdrawals')
 @Unique(['block', 'index'])
@@ -9,6 +9,7 @@ export class WithdrawEvent {
   @Column({ type: 'varchar', length: 42 })
   sender: string;
 
+  @Index()
   @Column({ type: 'varchar', length: 42 })
   owner: string;
 
