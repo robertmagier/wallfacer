@@ -11,8 +11,7 @@ import { Server } from 'socket.io';
 @WebSocketGateway({
   cors: {
     origin: '*', // Adjust this for security in production
-    methods: ['GET', 'POST'],
-    credentials: true,
+    credentials: false,
   },
 })
 export class TransactionsGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
