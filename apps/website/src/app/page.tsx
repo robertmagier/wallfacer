@@ -4,6 +4,7 @@ import BigNumber from "bignumber.js";
 import { useEffect, useState } from "react";
 import { io } from "socket.io-client";
 import DepositsList from "./DepositList";
+import WithdrawalsList from "./WithdrawalsLIst";
 
 const socket = io("http://localhost:3001"); // Replace with your backend URL
 
@@ -78,6 +79,7 @@ const TransactionsUpdates = () => {
   return (
     <div className="px-40 py-10  space-y-10 bg-gray-200">
       <DepositsList/>
+      <WithdrawalsList/>
       <TransactionTable
         title="Recent Deposits"
         data={deposits || []}

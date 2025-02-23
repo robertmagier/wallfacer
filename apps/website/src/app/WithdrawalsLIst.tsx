@@ -3,16 +3,16 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import Collapsable from './Collapsable';
 
-const DepositsList = () => {
-  const [deposits, setDeposits] = useState<any[]>([]);
+const WithdrawalsList = () => {
+  const [withdrawals, setWithdrawals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchDeposits = async () => {
+    const fetchWithdrawals = async () => {
       try {
-        const response = await axios.get('http://localhost:3001/transactions/deposits/10');
-        setDeposits(response.data);
+        const response = await axios.get('http://localhost:3001/transactions/withdrawals/10');
+        setWithdrawals(response.data);
         setLoading(false);
       } catch (err) {
         setError('Failed to fetch deposits');
@@ -20,7 +20,7 @@ const DepositsList = () => {
       }
     };
 
-    fetchDeposits();
+    fetchWithdrawals();
   }, []);
 
   if (loading) {
@@ -32,7 +32,7 @@ const DepositsList = () => {
   }
 
   return (
-    <Collapsable title="Deposits">
+    <Collapsable title="Withdrawals">
     <div className="bg-white shadow-md rounded-lg p-4">
       <table className="w-full border-collapse">
         <thead>
@@ -45,13 +45,13 @@ const DepositsList = () => {
           </tr>
         </thead>
         <tbody className="bg-gray">
-          {deposits.map((deposit, index) => (
+          {withdrawals.map((withdrawal, index) => (
             <tr key={index} className="hover:bg-gray-100">
-              <td className="p-2 text-black border-b">{deposit.sender}</td>
-              <td className="p-2 text-black border-b">{deposit.owner}</td>
-              <td className="p-2 text-black border-b">{deposit.assets}</td>
-              <td className="p-2 text-black border-b">{deposit.shares}</td>
-              <td className="p-2 text-black border-b">{new Date(deposit.timestamp).toLocaleString()}</td>
+              <td className="p-2 text-black border-b">{withdrawal.sender}</td>
+              <td className="p-2 text-black border-b">{withdrawal.owner}</td>
+              <td className="p-2 text-black border-b">{withdrawal.assets}</td>
+              <td className="p-2 text-black border-b">{withdrawal.shares}</td>
+              <td className="p-2 text-black border-b">{new Date(withdrawal.timestamp).toLocaleString()}</td>
             </tr>
           ))}
         </tbody>
@@ -61,4 +61,4 @@ const DepositsList = () => {
   );
 };
 
-export default DepositsList;
+export default WithdrawalsList;
