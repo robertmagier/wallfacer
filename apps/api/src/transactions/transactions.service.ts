@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { DepositEvent } from './entities/depositEvent.entity';
@@ -9,6 +9,7 @@ import { Aggregates } from './entities/aggregates.entity';
 @Injectable()
 export class TransactionsService {
   private readonly logger = new Logger(TransactionsService.name);
+  private testCount = 0;
   constructor(
     @InjectRepository(DepositEvent) private depositRepository: Repository<DepositEvent>,
     @InjectRepository(WithdrawEvent) private withdrawalRepository: Repository<WithdrawEvent>,
@@ -17,12 +18,13 @@ export class TransactionsService {
   ) {}
 
   async addDeposits(data: Partial<DepositEvent>[]): Promise<void> {
-    this.logger.debug('Saving deposits', JSON.stringify(data));
     for (let i = 0; i < data.length; i++) {
       try {
         await this.depositRepository.save(data[i]);
+        await this.updateAggregates(data[i], 'deposit');
       } catch (e) {
         this.logger.error('Error saving deposit', e.detail);
+        throw e
       }
     }
   }
@@ -30,54 +32,106 @@ export class TransactionsService {
   async getLastBlock(): Promise<string> {
     const depositBlock = await this.dataSource.query('SELECT MAX(block) as block FROM deposits');
     const withdrawalBlock = await this.dataSource.query('SELECT MAX(block) as block FROM withdrawals');
-    const maxBlock = new BigNumber(depositBlock[0].block).comparedTo(withdrawalBlock[0].block) > 0 ? depositBlock[0].block : withdrawalBlock[0].block;
-    return maxBlock.toString()
+    const maxBlock =
+      new BigNumber(depositBlock[0].block).comparedTo(withdrawalBlock[0].block) > 0 ? depositBlock[0].block : withdrawalBlock[0].block;
+    return maxBlock?.toString() || null;
   }
 
   async addWithdrawals(data: Partial<WithdrawEvent>[]): Promise<void> {
     for (let i = 0; i < data.length; i++) {
       try {
         await this.withdrawalRepository.save(data[i]);
+        await this.updateAggregates(data[i], 'withdrawal');
       } catch (e) {
         this.logger.error('Error saving withdrawal', e.detail);
+        throw e
       }
     }
   }
 
-  // private async updateAggregate(address: string, assets: string, shares: string, receiver?: string) {
-  //   // Find existing aggregate for the address
-  //   let aggregate = await this.aggregateRepository.findOneBy({ address });
+  private async updateAggregates(data: Partial<DepositEvent> | Partial<WithdrawEvent>, transaction_type: 'withdrawal' | 'deposit'): Promise<void> {
+    const aggregates = await this.aggregateRepository.findBy({ owner: data.owner, transaction_type });
+    if (aggregates.length > 1) {
+      throw new Error('More than one aggregate found');
+    }
+    const aggregate = aggregates[0];
 
-  //   if (!aggregate) {
-  //     // If no aggregate exists, create a new one
-  //     aggregate = this.aggregateRepository.create({
-  //       address,
-  //       total_assets: assets,
-  //       total_shares: shares,
-  //     });
-  //   } else {
-  //     // Update existing aggregate by adding assets and shares
-  //     aggregate.total_assets = (BigInt(aggregate.total_assets) + BigInt(assets)).toString();
-  //     aggregate.total_shares = (BigInt(aggregate.total_shares) + BigInt(shares)).toString();
-  //   }
+    if (aggregate) {
+      aggregate.total_assets = new BigNumber(aggregate.total_assets).plus(data.assets).toString();
+      aggregate.total_shares = new BigNumber(aggregate.total_shares).plus(data.shares).toString();
+      aggregate.transaction_count = parseInt(aggregate.transaction_count as any as  string) + 1;
+      await this.aggregateRepository.save(aggregate);
+    } else {
+      await this.aggregateRepository.save({
+        owner: data.owner,
+        total_assets: data.assets,
+        total_shares: data.shares,
+        transaction_type,
+      });
+    }
+  }
 
-  //   // Update aggregate for the receiver as well if it's a withdrawal
-  //   if (receiver) {
-  //     let receiverAggregate = await this.aggregateRepository.findOneBy({ address: receiver });
-  //     if (!receiverAggregate) {
-  //       receiverAggregate = this.aggregateRepository.create({
-  //         address: receiver,
-  //         total_assets: assets,
-  //         total_shares: shares,
-  //       });
-  //     } else {
-  //       receiverAggregate.total_assets = (BigInt(receiverAggregate.total_assets) + BigInt(assets)).toString();
-  //       receiverAggregate.total_shares = (BigInt(receiverAggregate.total_shares) + BigInt(shares)).toString();
-  //     }
+  async getLastDeposits(limit: number): Promise<DepositEvent[]> {
+    return this.depositRepository.find({
+      order: { timestamp: 'DESC' },
+      take: limit,
+    });
+  }
 
-  //     await this.aggregateRepository.save(receiverAggregate);
-  //   }
+  async getLastWithdrawals(limit: number): Promise<WithdrawEvent[]> {
+    return this.withdrawalRepository.find({
+      order: { timestamp: 'DESC' },
+      take: limit,
+    });
+  }
 
-  //   await this.aggregateRepository.save(aggregate);
-  // }
+  async getAggregatesOwners(): Promise<Aggregates[]> {
+    // get entries grouped by owner
+    return this.aggregateRepository.query(`
+      SELECT owner FROM aggregates GROUP BY owner
+    `);
+  }
+
+  async testInsert(): Promise<string | InternalServerErrorException> {
+    const deposit = {
+      sender: '0x827CB1C854B7037B9D158eeD240e37b1c6d03B0D',
+      owner: '0x827CB1C854B7037B9D158eeD240e37b1c6d03B0D',
+      assets: '3320011659',
+      shares: '3146678009',
+      block: '26725073',
+      index: 280 + this.testCount++,
+      timestamp: new Date(),
+    };
+    console.log('Inserting deposit:', deposit);
+
+    try {
+      await this.addDeposits([deposit]);
+    } catch (e) {
+      console.error('Error saving deposit', e);
+      // throw '❌ Error saving deposit';
+      return new InternalServerErrorException('Error saving deposit');
+    }
+
+    const withdrawal = {
+      sender: '0x827CB1C854B7037B9D158eeD240e37b1c6d03B0D',
+      owner: '0x827CB1C854B7037B9D158eeD240e37b1c6d03B0D',
+      receiver: '0x827CB1C854B7037B9D158eeD240e37b1c6d03B0D',
+      assets: '3320011659',
+      shares: '3146678009',
+      block: '26725073',
+      index: 280 + this.testCount++,
+      timestamp: new Date(),
+    };
+    console.log('Inserting withdrawal:', withdrawal);
+
+    try {
+      await this.addWithdrawals([withdrawal]);
+    } catch (e) {
+      console.error('Error saving withdrawal', e);
+      return new InternalServerErrorException('Error saving withdrawal');
+      
+    }
+
+    return '✅ Deposit and withftawal saved successfully';
+  }
 }
