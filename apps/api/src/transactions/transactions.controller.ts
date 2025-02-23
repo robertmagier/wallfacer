@@ -1,4 +1,4 @@
-import { Controller, Get, Post } from '@nestjs/common';
+import { Controller, Get, Param, Post } from '@nestjs/common';
 import { TransactionsService } from './transactions.service';
 
 @Controller('transactions')
@@ -10,14 +10,14 @@ export class TransactionsController {
     return this.transactionsService.testInsert();
   }
 
-  @Get('deposits')
-  async getDeposits() {
-    return this.transactionsService.getLastDeposits(10);
+  @Get('deposits/:last')
+  async getDeposits(@Param('last') last: number) {
+    return this.transactionsService.getLastDeposits(last || 1);
   }
 
-  @Get('withdrawals')
-  async getWithdrawals() {
-    return this.transactionsService.getLastWithdrawals(10);
+  @Get('withdrawals/:last')
+  async getWithdrawals(@Param('last') last: number) {
+    return this.transactionsService.getLastWithdrawals(last || 1);
   }
 
   @Get('aggregates_owners')
