@@ -15,17 +15,17 @@ const mockWithdrawalRepository = () => ({
 });
 
 const mockAggregateRepository = () => ({
-  findBy: jest.fn(()=>
-    [
-      {
-        owner: '0x827CB1C854B7037B9D158eeD240e37b1c6d03B0D',
-        transaction_type: 'deposit',
-        total_assets: '3320011659',
-        total_shares: '3146678009',
-        transaction_count: 1,
-      }]),
-      
-      save: jest.fn(),
+  findBy: jest.fn(() => [
+    {
+      owner: '0x827CB1C854B7037B9D158eeD240e37b1c6d03B0D',
+      transaction_type: 'deposit',
+      total_assets: '1',
+      total_shares: '1',
+      transaction_count: 1,
+    },
+  ]),
+
+  save: jest.fn(),
 });
 
 const mockDataSource = () => ({
@@ -58,8 +58,8 @@ describe('TransactionsService', () => {
       {
         sender: '0x827CB1C854B7037B9D158eeD240e37b1c6d03B0D',
         owner: '0x827CB1C854B7037B9D158eeD240e37b1c6d03B0D',
-        assets: '3320011659',
-        shares: '3146678009',
+        assets: '1',
+        shares: '1',
         block: '26725073',
         index: 280,
         timestamp: new Date(),
@@ -70,6 +70,12 @@ describe('TransactionsService', () => {
 
     expect(depositRepository.save).toHaveBeenCalledWith(depositData[0]);
     expect(aggregateRepository.findBy).toHaveBeenCalled();
-    expect(aggregateRepository.save).toHaveBeenCalled();
+    expect(aggregateRepository.save).toHaveBeenCalledWith({
+      owner: '0x827CB1C854B7037B9D158eeD240e37b1c6d03B0D',
+      total_assets: '2',
+      total_shares: '2',
+      transaction_count: 2,
+      transaction_type: 'deposit',
+    });
   });
 });
