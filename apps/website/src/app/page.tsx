@@ -7,7 +7,6 @@ import DepositsList from "./DepositList";
 import WithdrawalsList from "./WithdrawalsLIst";
 
 const socket = io(process.env.NEXT_PUBLIC_API_URL, {
-  transports: ["websocket", "polling"], 
   withCredentials: true
 });
 
