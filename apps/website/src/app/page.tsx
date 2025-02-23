@@ -6,9 +6,7 @@ import { io } from "socket.io-client";
 import DepositsList from "./DepositList";
 import WithdrawalsList from "./WithdrawalsLIst";
 
-const socket = io(process.env.NEXT_PUBLIC_API_URL, {
-  withCredentials: true
-});
+const socket = io(process.env.NEXT_PUBLIC_API_URL);
 
 const TransactionsUpdates = () => {
   const [deposits, setDeposits] = useState<any[]>([]);
