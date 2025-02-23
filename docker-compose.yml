@@ -9,9 +9,14 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
     ports:
-      - "5433:5432"
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   api:
     build:
@@ -19,12 +24,13 @@ services:
       dockerfile: Dockerfile
     container_name: nest_api
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     environment:
       API_PORT: ${API_PORT}
       INFURA_API_KEY: ${INFURA_API_KEY}
       FUSDC_ADDRESS: ${FUSDC_ADDRESS}
-      DB_HOST: ${DB_HOST}
+      DB_HOST: postgres
       DB_PORT: ${DB_PORT}
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
@@ -42,7 +48,7 @@ services:
     environment:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
     ports:
-      - "80:3000"
+      - "3080:3000"
 
 volumes:
   postgres_data:
