@@ -46,7 +46,7 @@ services:
     depends_on:
       - api
     environment:
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+      NEXT_API_URL: ${NEXT_API_URL}
     ports:
       - "3080:3000"
 
