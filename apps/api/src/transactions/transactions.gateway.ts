@@ -31,6 +31,10 @@ export class TransactionsGateway implements OnGatewayInit, OnGatewayConnection, 
 
   // Method to emit updates
   notifyClients(event: string, data: any) {
-    this.server.emit(event, data);
+    try {
+      this.server.emit(event, data);
+    } catch(e) {
+      console.error('Error notifying clients:', e);
+    }
   }
 }
