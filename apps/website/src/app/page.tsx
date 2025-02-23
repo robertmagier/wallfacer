@@ -6,8 +6,7 @@ import { io } from "socket.io-client";
 import DepositsList from "./DepositList";
 import WithdrawalsList from "./WithdrawalsLIst";
 
-const socket = io(process.env.NEXT_API_URL); // Replace with your backend URL
-
+const socket = io(process.env.NEXT_PUBLIC_API_URL);
 const TransactionsUpdates = () => {
   const [deposits, setDeposits] = useState<any[]>([]);
   const [withdrawals, setWithdrawals] = useState<any[]>([]);

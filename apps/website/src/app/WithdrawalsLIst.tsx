@@ -11,7 +11,7 @@ const WithdrawalsList = () => {
   useEffect(() => {
     const fetchWithdrawals = async () => {
       try {
-        const response = await axios.get(`${process.env.NEXT_API_URL}/transactions/withdrawals/10`);
+        const response = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/transactions/withdrawals/10`);
         setWithdrawals(response.data);
         setLoading(false);
       } catch (err) {

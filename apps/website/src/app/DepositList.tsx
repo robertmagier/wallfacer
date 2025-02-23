@@ -11,7 +11,7 @@ const DepositsList = () => {
   useEffect(() => {
     const fetchDeposits = async () => {
       try {
-        const response = await axios.get(`${process.env.NEXT_API_URL}/transactions/deposits/10`);
+        const response = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/transactions/deposits/10`);
         setDeposits(response.data);
         setLoading(false);
       } catch (err) {
