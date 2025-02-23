@@ -29,21 +29,30 @@ export class EventListenerService implements OnModuleInit {
     this.logger.log(`Last block: ${lastBlockInDb}`);
 
     this.provider = new ethers.JsonRpcProvider(`${PROVIDER_URL}/${process.env.INFURA_API_KEY}`);
-    this.provider.getNetwork().then((network) => {
-      this.logger.log(`Network: ${network.name}`);
-    });
     this.contract = FUSDC_ABI__factory.connect(this.FUSDC_ADDRESS, this.provider);
-    const currentBlock = await this.provider.getBlockNumber();
+    let currentBlock;
+    try {
+      const currentBlock = await this.provider.getBlockNumber();
+    } catch (e) {
+      this.logger.error('Error getting current block', e);
+      currentBlock = null;
+    }
     const startBlock = lastBlockInDb ? BigInt(lastBlockInDb) + BigInt(1) : currentBlock - HISTORY_BLOCKS;
 
-    this.provider.on('block', async (blockNumber) => {
-      this.logger.debug(`Get block information for block ${blockNumber.toString()}`);
-      const deposits = await this.getDepositEvent(BigInt(blockNumber) - BigInt(1), BigInt(blockNumber));
-      const withdraws = await this.getWithdrawEvent(BigInt(blockNumber) - BigInt(1), BigInt(blockNumber));
-      console.log('Deposits:', deposits);
-      console.log('Withdraws:', withdraws);
-    });
-    await this.getHistoricalLogs(startBlock, currentBlock);
+    // setTimeout(async () => {
+    //   await this.getDepositEvent(BigInt(26751928) - BigInt(1), BigInt(26751928));
+    // }, 10000);
+    // }, 10000);
+    if (currentBlock) {
+      this.provider.on('block', async (blockNumber) => {
+        this.logger.debug(`Get block information for block ${blockNumber.toString()}`);
+        const deposits = await this.getDepositEvent(BigInt(blockNumber) - BigInt(1), BigInt(blockNumber));
+        const withdraws = await this.getWithdrawEvent(BigInt(blockNumber) - BigInt(1), BigInt(blockNumber));
+      });
+      setTimeout(async () => {
+        await this.getHistoricalLogs(startBlock, currentBlock);
+      }, 10000);
+    }
   }
 
   private async getEvent<T extends DepositEventDetails | WithdrawEventDetails>(
@@ -52,16 +61,21 @@ export class EventListenerService implements OnModuleInit {
     topics: ethers.TopicFilter,
   ): Promise<T[]> {
     const data: T[] = [] as T[];
-    const logs = await this.provider.getLogs({
-      fromBlock: fromBlock as ethers.BlockTag,
-      toBlock: toBlock as ethers.BlockTag,
-      address: this.FUSDC_ADDRESS,
-      topics,
-    });
-    for (let i = 0; i < logs.length; i++) {
-      const log = logs[i];
-      const logData = await this.parseLog<T>(log);
-      data.push(logData);
+    try {
+      const logs = await this.provider.getLogs({
+        fromBlock: fromBlock as ethers.BlockTag,
+        toBlock: toBlock as ethers.BlockTag,
+        address: this.FUSDC_ADDRESS,
+        topics,
+      });
+      for (let i = 0; i < logs.length; i++) {
+        const log = logs[i];
+        const logData = await this.parseLog<T>(log);
+        data.push(logData);
+      }
+    } catch (e) {
+      this.logger.error('Error getting logs', e);
+      return [];
     }
     return data;
   }
@@ -70,7 +84,7 @@ export class EventListenerService implements OnModuleInit {
     const depositFilter = this.contract.filters.Deposit(null, null, null);
     const topics = await depositFilter.getTopicFilter();
     const events = await this.getEvent<DepositEventDetails>(fromBlock, toBlock, topics);
-
+    console.log(events);
     const dbEvents = events.map((event) => {
       return {
         ...event,
@@ -80,8 +94,6 @@ export class EventListenerService implements OnModuleInit {
         timestamp: new Date(event.timestamp * 1000),
       };
     });
-    console.log(events);
-    console.log(dbEvents);
     await this.transactionsService.addDeposits(dbEvents);
     return events;
   }
