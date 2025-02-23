@@ -27,22 +27,21 @@ export class EventListenerService implements OnModuleInit {
     this.logger.log('EventListenerService is running');
     const lastBlockInDb = await this.transactionsService.getLastBlock();
     this.logger.log(`Last block: ${lastBlockInDb}`);
-    
+
     this.provider = new ethers.JsonRpcProvider(`${PROVIDER_URL}/${process.env.INFURA_API_KEY}`);
     this.provider.getNetwork().then((network) => {
       this.logger.log(`Network: ${network.name}`);
     });
     this.contract = FUSDC_ABI__factory.connect(this.FUSDC_ADDRESS, this.provider);
     const currentBlock = await this.provider.getBlockNumber();
-    const startBlock = lastBlockInDb ? BigInt(lastBlockInDb) : currentBlock - HISTORY_BLOCKS;
+    const startBlock = lastBlockInDb ? BigInt(lastBlockInDb) + BigInt(1) : currentBlock - HISTORY_BLOCKS;
 
-    
     this.provider.on('block', async (blockNumber) => {
-        this.logger.debug(`Get block information for block ${blockNumber.toString()}`);
-        const deposits = await this.getDepositEvent(BigInt(blockNumber)-BigInt(1), BigInt(blockNumber));
-        const withdraws = await this.getWithdrawEvent(BigInt(blockNumber)-BigInt(1), BigInt(blockNumber));
-        console.log('Deposits:', deposits);
-        console.log('Withdraws:', withdraws);
+      this.logger.debug(`Get block information for block ${blockNumber.toString()}`);
+      const deposits = await this.getDepositEvent(BigInt(blockNumber) - BigInt(1), BigInt(blockNumber));
+      const withdraws = await this.getWithdrawEvent(BigInt(blockNumber) - BigInt(1), BigInt(blockNumber));
+      console.log('Deposits:', deposits);
+      console.log('Withdraws:', withdraws);
     });
     await this.getHistoricalLogs(startBlock, currentBlock);
   }
