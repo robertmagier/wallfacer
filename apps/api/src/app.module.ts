@@ -9,6 +9,11 @@ import { DepositEvent } from './transactions/entities/depositEvent.entity';
 import { WithdrawEvent } from './transactions/entities/withdrawEvent.entity';
 import { TransactionsService } from './transactions/transactions.service';
 import { Aggregates } from './transactions/entities/aggregates.entity';
+import { DepositSubscriber } from './transactions/subscribers/deposit.subscriber';
+import { TransactionsGateway } from './transactions/transactions.gateway';
+import { TransactionsController } from './transactions/transactions.controller';
+import { WithdrawalSubscriber } from './transactions/subscribers/withdrawal.subscriber';
+import { AggreagateSubscriber } from './transactions/subscribers/aggregate.subscriber';
 
 @Module({
   imports: [
@@ -20,14 +25,19 @@ import { Aggregates } from './transactions/entities/aggregates.entity';
       username: process.env.DB_USER,
       password: process.env.DB_PASSWORD,
       database: process.env.DB_NAME,
-      entities: [DepositEvent, WithdrawEvent],
+      entities: [DepositEvent, WithdrawEvent, Aggregates],
       synchronize: true, // Set to false for production
       autoLoadEntities: true,
+      // subscribers: [DepositSubscriber],
     }),
     TypeOrmModule.forFeature([DepositEvent, WithdrawEvent, Aggregates]), // Import the entities
-    TransactionsModule,
+    // TransactionsModule,
   ],
-  controllers: [AppController],
-  providers: [AppService, EventListenerService, TransactionsService],
+  controllers: [AppController,TransactionsController],
+  providers: [AppService, TransactionsService, DepositSubscriber,WithdrawalSubscriber,AggreagateSubscriber, TransactionsGateway, EventListenerService],
 })
-export class AppModule {}
+export class AppModule {
+  constructor() {
+    console.log('Subscribers dir:', __dirname + '/transactions/subscribers/*.subscriber{.ts,.js}');
+  }
+}
