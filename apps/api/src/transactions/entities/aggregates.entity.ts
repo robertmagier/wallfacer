@@ -15,6 +15,9 @@ export class Aggregates {
   @Column({ type: 'numeric', precision: 78, scale: 0 })
   total_shares: string;
 
+  @Column({ type: 'numeric',default: 0 })
+  transaction_count: number;
+
   @Column({ type: 'varchar' })
   transaction_type: 'deposit' | 'withdrawal';
 }
