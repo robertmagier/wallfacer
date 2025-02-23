@@ -6,7 +6,11 @@ import { io } from "socket.io-client";
 import DepositsList from "./DepositList";
 import WithdrawalsList from "./WithdrawalsLIst";
 
-const socket = io(process.env.NEXT_PUBLIC_API_URL);
+const socket = io(process.env.NEXT_PUBLIC_API_URL, {
+  transports: ["websocket", "polling"], 
+  withCredentials: true
+});
+
 const TransactionsUpdates = () => {
   const [deposits, setDeposits] = useState<any[]>([]);
   const [withdrawals, setWithdrawals] = useState<any[]>([]);
@@ -77,8 +81,8 @@ const TransactionsUpdates = () => {
 
   return (
     <div className="px-40 py-10  space-y-10 bg-gray-200">
-      <DepositsList/>
-      <WithdrawalsList/>
+      <DepositsList />
+      <WithdrawalsList />
       <TransactionTable
         title="Recent Deposits"
         data={deposits || []}
