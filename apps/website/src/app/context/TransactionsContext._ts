@@ -1,0 +1,58 @@
+"use client";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
+
+import axios from "axios";
+
+interface TransactionsContextType {
+  deposits: any[];
+  loadingDeposits: boolean;
+  withdrawals: any[];
+  loadingWithdrawals: boolean;
+  aggregates: any[];
+  loadingAggregates: boolean;
+  error: string | null;
+  fetchDeposits: () => void;
+}
+
+const TransactionsContext = createContext<TransactionsContextType>({} as TransactionsContextType);
+
+export const TransactionsProvider = ({
+    children,
+}: {
+    children: React.ReactNode;
+}) => {
+  const [deposits, setDeposits] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchDeposits = async () => {
+    try {
+      const response = await axios.get(
+        "http://localhost:3001/transactions/deposits/10"
+      );
+      setDeposits(response.data);
+      setLoading(false);
+    } catch (err) {
+      setError("Failed to fetch deposits");
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDeposits();
+  }, []);
+
+  return (
+    <TransactionsContext.Provider
+      value={{ deposits, loading, error, fetchDeposits }}
+    >
+      {children}
+    </TransactionsContext.Provider>
+  );
+};
