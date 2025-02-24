@@ -5,6 +5,8 @@ import { useEffect, useState } from "react";
 import { io } from "socket.io-client";
 import DepositsList from "./DepositList";
 import WithdrawalsList from "./WithdrawalsLIst";
+import Section from "./Section";
+import RecentTransactionsTable from "./RecentTransactions";
 
 const socket = io(process.env.NEXT_PUBLIC_API_URL);
 
@@ -18,28 +20,27 @@ const TransactionsUpdates = () => {
 
   useEffect(() => {
     socket.on("deposit_changes", (data) => {
-      data.assets = new BigNumber(data.assets)
-        .shiftedBy(-6)
-        .toFixed(2)
-        .toString();
-      data.shares = new BigNumber(data.shares)
-        .shiftedBy(-6)
-        .toFixed(2)
-        .toString();
+      data.assets = new BigNumber(data.assets).shiftedBy(-6).toFormat(2);
+      data.shares = new BigNumber(data.shares).shiftedBy(-6).toFormat(2);
+
+      data.timestamp = new Date(data.timestamp).toLocaleString("en-US", {
+        timeStyle: "short",
+        dateStyle: "medium",
+        hourCycle: "h24",
+      });
       console.log("New deposit:", data);
       setDeposits((prev) => [data, ...prev]);
     });
 
     socket.on("withdrawal_changes", (data) => {
       console.log("New withdrawatoFixed(2).l:", data);
-      data.assets = new BigNumber(data.assets)
-        .shiftedBy(-6)
-        .toFixed(2)
-        .toString();
-      data.shares = new BigNumber(data.shares)
-        .shiftedBy(-6)
-        .toFixed(2)
-        .toString();
+      data.assets = new BigNumber(data.assets).shiftedBy(-6).toFormat(2);
+      data.shares = new BigNumber(data.shares).shiftedBy(-6).toFormat(2);
+      data.timestamp = new Date(data.timestamp).toLocaleString("en-US", {
+        timeStyle: "short",
+        dateStyle: "medium",
+        hourCycle: "h24",
+      });
       setWithdrawals((prev) => [data, ...prev]);
     });
 
@@ -47,12 +48,10 @@ const TransactionsUpdates = () => {
       console.log("New aggregate update:", data);
       data.total_assets = new BigNumber(data.total_assets)
         .shiftedBy(-6)
-        .toFixed(2)
-        .toString();
+        .toFormat(2);
       data.total_shares = new BigNumber(data.total_shares)
         .shiftedBy(-6)
-        .toFixed(2)
-        .toString();
+        .toFormat(2);
       setAggregates((prev) => {
         const index = prev.findIndex(
           (item) =>
@@ -78,97 +77,46 @@ const TransactionsUpdates = () => {
 
   return (
     <div className="px-40 py-10  space-y-10 bg-gray-200">
-      <DepositsList />
-      <WithdrawalsList />
-      <TransactionTable
-        title="Recent Deposits"
-        data={deposits || []}
-        showMore={showMoreDeposits}
-        properties={["sender", "owner", "assets", "shares", "timestamp"]}
-        setShowMore={setShowMoreDeposits}
-      />
-      <TransactionTable
-        title="Recent Withdrawals"
-        data={withdrawals || []}
-        properties={[
-          "sender",
-          "owner",
-          "receiver",
-          "assets",
-          "shares",
-          "timestamp",
-        ]}
-        showMore={showMoreWithdrawals}
-        setShowMore={setShowMoreWithdrawals}
-      />
-      <TransactionTable
-        title="Recent Aggregate Changes"
-        data={aggregates || []}
-        properties={[
-          "owner",
-          "total_assets",
-          "total_shares",
-          "transaction_type",
-          "transaction_count",
-        ]}
-        showMore={showMoreAggregates}
-        setShowMore={setShowMoreAggregates}
-      />
+      <div className="w-full flex">
+      <img src="/wallfacer.svg" className="w-10"/>
+        <h1 className="text-black ml-5">Wallfacer Demo</h1>
+      </div>
+      <Section title="Recent Transactions">
+        <RecentTransactionsTable
+          title="Recent Deposits"
+          data={deposits || []}
+          showMore={showMoreDeposits}
+          properties={["sender", "assets", "shares", "timestamp"]}
+          setShowMore={setShowMoreDeposits}
+        />
+        <RecentTransactionsTable
+          title="Recent Withdrawals"
+          data={withdrawals || []}
+          properties={["receiver", "assets", "shares", "timestamp"]}
+          showMore={showMoreWithdrawals}
+          setShowMore={setShowMoreWithdrawals}
+        />
+        <RecentTransactionsTable
+          title="Recent Aggregate Changes"
+          data={aggregates || []}
+          properties={[
+            "owner",
+            "total_assets",
+            "total_shares",
+            "transaction_type",
+            "transaction_count",
+          ]}
+          showMore={showMoreAggregates}
+          setShowMore={setShowMoreAggregates}
+        />
+      </Section>
+
+      <Section title="Historical Transactions">
+        <DepositsList />
+        <WithdrawalsList />
+      </Section>
     </div>
   );
 };
 
-const TransactionTable = ({
-  title,
-  data,
-  properties,
-  showMore,
-  setShowMore,
-}: {
-  title: string;
-  data: any[];
-  properties: string[];
-  showMore: boolean;
-  setShowMore: (value: boolean) => void;
-}) => {
-  if (!data || data.length === 0) return null;
-
-  const displayedData = showMore ? data : data.slice(0, 5);
-
-  return (
-    <div className="bg-white shadow-md rounded-lg full-width p-4">
-      <h2 className="text-xl text-blue-800 font-semibold mb-4">{title}</h2>
-      <table className="w-full border-collapse">
-        <thead>
-          <tr className="bg-gray-200 text-blue-800">
-            {properties.map((key) => (
-              <th key={key} className="text-left p-2 border-b">
-                {key.charAt(0).toUpperCase() + key.slice(1)}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="bg-gray">
-          {displayedData.map((row, index) => (
-            <tr key={index} className="hover:bg-gray-100">
-              {properties.map((key) => (
-                <td key={key} className="p-2 text-black border-b">
-                  {String(row[key])}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      {data.length > 5 && (
-        <button
-          className="mt-4 text-blue-800 underline"
-          onClick={() => setShowMore(!showMore)}
-        >
-          {showMore ? "Show Less" : "Show More"}
-        </button>
-      )}
-    </div>
-  );
-};
 export default TransactionsUpdates;
