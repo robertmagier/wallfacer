@@ -94,7 +94,11 @@ export class EventListenerService implements OnModuleInit {
         timestamp: new Date(event.timestamp * 1000),
       };
     });
-    await this.transactionsService.addDeposits(dbEvents);
+    try {
+        await this.transactionsService.addDeposits(dbEvents);
+    } catch(e) {
+        this.logger.error('Error saving deposits', e);
+    }
     return events;
   }
 
@@ -111,7 +115,11 @@ export class EventListenerService implements OnModuleInit {
         timestamp: new Date(event.timestamp * 1000),
       };
     });
-    const result = await this.transactionsService.addWithdrawals(dbEvents);
+    try {
+        const result = await this.transactionsService.addWithdrawals(dbEvents);
+    } catch(e) {
+        this.logger.error('Error saving withdrawals', e);
+    }
     return events;
   }
 
@@ -124,7 +132,11 @@ export class EventListenerService implements OnModuleInit {
     logData.name = parsedLog.name;
     logData.block = log.blockNumber;
     logData.index = log.index;
-    logData.timestamp = await this.getBlockTimestamp(log.blockNumber.toString());
+    try {
+        logData.timestamp = await this.getBlockTimestamp(log.blockNumber.toString());
+    } catch(e) {
+        this.logger.error('Error getting block timestamp', e);
+    }
     return logData;
   }
 
