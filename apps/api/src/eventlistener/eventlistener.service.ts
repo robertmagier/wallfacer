@@ -32,7 +32,7 @@ export class EventListenerService implements OnModuleInit {
     this.contract = FUSDC_ABI__factory.connect(this.FUSDC_ADDRESS, this.provider);
     let currentBlock;
     try {
-      const currentBlock = await this.provider.getBlockNumber();
+      currentBlock = await this.provider.getBlockNumber();
     } catch (e) {
       this.logger.error('Error getting current block', e);
       currentBlock = null;
