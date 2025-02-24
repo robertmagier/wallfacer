@@ -67,6 +67,7 @@ export class TransactionsService {
         total_assets: data.assets,
         total_shares: data.shares,
         transaction_type,
+        transaction_count: 1,
       });
     }
   }
